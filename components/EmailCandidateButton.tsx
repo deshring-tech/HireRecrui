@@ -13,7 +13,7 @@ export default function EmailCandidateButton({
   role,
   compact = false,
 }: {
-  recruiterId: string;
+  recruiterId: string | null;
   email: string;
   candidateName: string;
   role?: string;
@@ -22,6 +22,7 @@ export default function EmailCandidateButton({
   const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
+    if (!recruiterId) return; // self-serve profile — no owning recruiter
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((d) => setIsOwner(d.user?.id === recruiterId))

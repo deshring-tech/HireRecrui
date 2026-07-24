@@ -85,10 +85,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "This edit link is no longer valid." }, { status: 404 });
   }
 
-  const effectiveRecruiterId = existing ? existing.recruiterId : recruiterId;
+  // recruiterId is optional: when present the profile is tagged to that recruiter's
+  // dashboard; when absent the candidate is self-serving (free-floating shareable
+  // profile owned by no one). An invalid recruiterId is still rejected.
+  const effectiveRecruiterId = existing ? existing.recruiterId : recruiterId || null;
 
   if (!existing) {
-    if (!effectiveRecruiterId || !(await getUserById(effectiveRecruiterId))) {
+    if (recruiterId && !(await getUserById(recruiterId))) {
       return NextResponse.json(
         { error: "This link isn't tied to a valid recruiter account. Ask them for their personalized intake link." },
         { status: 400 }
@@ -174,7 +177,8 @@ Return strict JSON matching this shape exactly, no extra keys, no markdown.`,
   };
 
   await addCandidate(candidate);
-  await notifyNewCandidate(candidate);
+  // Only notify when the profile is tied to a recruiter (recruiter-collected flow).
+  if (candidate.recruiterId) await notifyNewCandidate(candidate);
 
   return NextResponse.json({ id: candidate.id, editToken: candidate.editToken });
 }

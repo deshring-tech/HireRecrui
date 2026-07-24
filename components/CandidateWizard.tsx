@@ -295,6 +295,13 @@ export default function CandidateWizard({
         </div>
       )}
 
+      {mode === "create" && !recruiterName && (
+        <div className="mb-6 text-sm bg-brand-50 text-brand-700 border border-brand-100 rounded-xl px-4 py-3">
+          Build your interactive profile once and get a shareable link to send to any recruiter or add to your
+          applications — no account needed.
+        </div>
+      )}
+
       <div className="flex items-center gap-2 mb-8">
         <StepDot active={step >= 1} />
         <div className="h-px w-8 bg-slate-200" />
@@ -526,8 +533,11 @@ export default function CandidateWizard({
                 className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-500 focus:ring-brand-100"
               />
               <span>
-                I consent to my resume and uploaded materials being processed by AI to generate an interactive
-                profile shared with the recruiter above. I understand a human makes the final hiring decision.
+                I consent to my resume and uploaded materials being processed by AI to generate an interactive,
+                shareable profile.{" "}
+                {recruiterName
+                  ? "It will be shared with the recruiter above, and I understand a human makes the final hiring decision."
+                  : "I control who I share the link with."}
               </span>
             </label>
           )}

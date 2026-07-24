@@ -32,7 +32,8 @@ create table if not exists jobs (
 
 create table if not exists candidates (
   id uuid primary key,
-  recruiter_id uuid not null references users(id) on delete cascade,
+  -- nullable: null = candidate self-serve profile (owned by no recruiter)
+  recruiter_id uuid references users(id) on delete cascade,
   job_id uuid references jobs(id) on delete set null,
   edit_token uuid not null unique,
   name text not null,

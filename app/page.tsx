@@ -26,16 +26,17 @@ export default function Home() {
             <span className="mt-4 inline-block text-sm font-medium text-brand-600">Log in or sign up →</span>
           </Link>
 
-          <div className="card p-7">
+          <Link href="/candidate" className="card p-7 hover:shadow-md hover:-translate-y-0.5 transition-all">
             <div className="w-10 h-10 rounded-lg bg-brand-50 text-brand-600 grid place-items-center mb-4 text-lg">
               🧑‍💻
             </div>
             <h2 className="text-lg font-semibold text-slate-900">I'm a Candidate</h2>
             <p className="mt-1.5 text-sm text-slate-500">
-              Open the intake link your recruiter sent you. Paste your work once and get an interactive profile in
-              minutes — no account needed.
+              Paste your work once, get an interactive profile and one shareable link to send to recruiters — no
+              account needed.
             </p>
-          </div>
+            <span className="mt-4 inline-block text-sm font-medium text-brand-600">Build my profile →</span>
+          </Link>
         </div>
       </section>
     </main>

@@ -11,6 +11,7 @@ const STATUS_MESSAGE: Record<CandidateStatus, string> = {
 
 // Fired when a candidate submits through a recruiter's intake link.
 export async function notifyNewCandidate(candidate: Candidate): Promise<void> {
+  if (!candidate.recruiterId) return;
   const recruiter = await getUserById(candidate.recruiterId);
   if (!recruiter) return;
 

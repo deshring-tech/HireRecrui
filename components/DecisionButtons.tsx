@@ -25,7 +25,7 @@ export default function DecisionButtons({
   compact = false,
 }: {
   candidateId: string;
-  recruiterId: string;
+  recruiterId: string | null;
   initialStatus: Status;
   compact?: boolean;
 }) {
@@ -34,6 +34,7 @@ export default function DecisionButtons({
   const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
+    if (!recruiterId) return; // self-serve profile — no owning recruiter
     fetch("/api/auth/me")
       .then((r) => r.json())
       .then((d) => setIsOwner(d.user?.id === recruiterId))

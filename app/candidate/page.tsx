@@ -30,6 +30,7 @@ function CandidateEntry() {
   );
 
   useEffect(() => {
+    // No recruiter link → self-serve mode (candidate builds a free-floating profile).
     if (!recruiterId) {
       setCtx({ valid: false });
       return;
@@ -40,20 +41,28 @@ function CandidateEntry() {
       .catch(() => setCtx({ valid: false }));
   }, [recruiterId, jobId]);
 
+  // Self-serve: someone arrived at /candidate with no ?r= at all.
+  const selfServe = !recruiterId;
+
   return (
     <main>
       <NavBar />
       <section className="max-w-2xl mx-auto px-6 pb-24">
         {ctx === null && <p className="text-slate-400 text-sm">Loading...</p>}
 
-        {ctx && !ctx.valid && (
+        {/* Only warn when a recruiter link was provided but is invalid. */}
+        {ctx && !ctx.valid && !selfServe && (
           <div className="text-sm bg-amber-50 text-amber-700 border border-amber-100 rounded-xl px-4 py-3">
-            This intake link isn't tied to a valid recruiter. Ask them for their personalized link so your profile
-            lands in the right place.
+            This intake link isn't tied to a valid recruiter. You can still build your profile below and share it
+            yourself.
           </div>
         )}
 
-        {ctx && ctx.valid && (
+        {/* Self-serve mode: build a shareable profile with no recruiter. */}
+        {ctx && selfServe && <CandidateWizard mode="create" />}
+
+        {/* Recruiter-collected mode. */}
+        {ctx && !selfServe && ctx.valid && (
           <CandidateWizard
             mode="create"
             recruiterId={recruiterId}
@@ -62,6 +71,9 @@ function CandidateEntry() {
             jobTitle={ctx.job?.title}
           />
         )}
+
+        {/* Recruiter link present but invalid → still let them self-serve. */}
+        {ctx && !selfServe && !ctx.valid && <CandidateWizard mode="create" />}
       </section>
     </main>
   );

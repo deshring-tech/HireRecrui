@@ -46,7 +46,7 @@ export type CandidateStatus = "new" | "accepted" | "rejected" | "interview";
 
 export type Candidate = {
   id: string;
-  recruiterId: string;
+  recruiterId: string | null;
   jobId: string | null;
   editToken: string;
   name: string;
