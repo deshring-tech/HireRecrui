@@ -71,6 +71,138 @@ const SKILL_LABELS: Record<string, string> = {
   websockets: "WebSockets",
   jest: "Jest",
   cypress: "Cypress",
+
+  // languages
+  elixir: "Elixir",
+  "dart language": "Dart",
+  "flutter/dart": "Dart",
+  solidity: "Solidity",
+  haskell: "Haskell",
+  clojure: "Clojure",
+  perl: "Perl",
+  lua: "Lua",
+  "objective-c": "Objective-C",
+  bash: "Bash",
+  powershell: "PowerShell",
+
+  // frontend
+  "react native": "React Native",
+  flutter: "Flutter",
+  jquery: "jQuery",
+  bootstrap: "Bootstrap",
+  "material ui": "Material UI",
+  mui: "Material UI",
+  shadcn: "shadcn/ui",
+  "framer motion": "Framer Motion",
+  "three.js": "Three.js",
+  threejs: "Three.js",
+  astro: "Astro",
+  "remix.run": "Remix",
+  "remix framework": "Remix",
+  gatsby: "Gatsby",
+  vite: "Vite",
+  webpack: "Webpack",
+  sass: "Sass",
+  scss: "Sass",
+  "styled-components": "styled-components",
+  zustand: "Zustand",
+  "react query": "React Query",
+  "tanstack query": "TanStack Query",
+
+  // backend / api
+  fastify: "Fastify",
+  koa: "Koa",
+  "phoenix framework": "Phoenix",
+  "asp.net": "ASP.NET",
+  symfony: "Symfony",
+  grpc: "gRPC",
+  trpc: "tRPC",
+  prisma: "Prisma",
+  drizzle: "Drizzle ORM",
+  sqlalchemy: "SQLAlchemy",
+  hibernate: "Hibernate",
+  "spring boot": "Spring Boot",
+
+  // databases
+  sqlite: "SQLite",
+  mariadb: "MariaDB",
+  dynamodb: "DynamoDB",
+  cassandra: "Cassandra",
+  elasticsearch: "Elasticsearch",
+  neo4j: "Neo4j",
+  cockroachdb: "CockroachDB",
+  snowflake: "Snowflake",
+  bigquery: "BigQuery",
+
+  // devops / cloud
+  vercel: "Vercel",
+  netlify: "Netlify",
+  heroku: "Heroku",
+  digitalocean: "DigitalOcean",
+  cloudflare: "Cloudflare",
+  nginx: "Nginx",
+  ansible: "Ansible",
+  jenkins: "Jenkins",
+  "gitlab ci": "GitLab CI",
+  circleci: "CircleCI",
+  prometheus: "Prometheus",
+  grafana: "Grafana",
+  datadog: "Datadog",
+  kafka: "Apache Kafka",
+  "apache spark": "Apache Spark",
+  pyspark: "PySpark",
+  rabbitmq: "RabbitMQ",
+  // ai / ml
+  "hugging face": "Hugging Face",
+  huggingface: "Hugging Face",
+  langchain: "LangChain",
+  "scikit-learn": "scikit-learn",
+  sklearn: "scikit-learn",
+  keras: "Keras",
+  opencv: "OpenCV",
+  anthropic: "Anthropic API",
+  claude: "Claude API",
+  pinecone: "Pinecone",
+  "computer vision": "Computer Vision",
+  "deep learning": "Deep Learning",
+  "retrieval-augmented": "RAG",
+  "retrieval augmented": "RAG",
+  "rag pipeline": "RAG",
+  "rag pipelines": "RAG",
+  "rag system": "RAG",
+
+  // testing
+  playwright: "Playwright",
+  vitest: "Vitest",
+  mocha: "Mocha",
+  selenium: "Selenium",
+  pytest: "Pytest",
+  junit: "JUnit",
+
+  // mobile
+  android: "Android",
+  ios: "iOS",
+  xcode: "Xcode",
+  swiftui: "SwiftUI",
+
+  // data
+  hadoop: "Hadoop",
+  airflow: "Airflow",
+  dbt: "dbt",
+  tableau: "Tableau",
+  "power bi": "Power BI",
+
+  // tools / other
+  figma: "Figma",
+  jira: "Jira",
+  postman: "Postman",
+  storybook: "Storybook",
+  webrtc: "WebRTC",
+  oauth: "OAuth",
+  jwt: "JWT",
+  twilio: "Twilio",
+  sendgrid: "SendGrid",
+  sentry: "Sentry",
 };
 
 function escapeRegex(s: string) {
@@ -91,20 +223,48 @@ function looksDeployed(links: string[]): boolean {
   return links.some((l) => /^https?:\/\//i.test(l) || /\.(io|com|dev|app|co|net|org)(\/|$)/i.test(l));
 }
 
+// "A", "A and B", "A, B, and C"
+function listPhrase(items: string[]): string {
+  if (items.length === 0) return "";
+  if (items.length === 1) return items[0];
+  if (items.length === 2) return `${items[0]} and ${items[1]}`;
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
+}
+
 export function buildSummary(input: {
   title: string;
-  projects: { title: string }[];
+  projects: { title: string; links?: string[] }[];
   skills: string[];
 }): string {
   const { title, projects, skills } = input;
-  const topSkills = skills.slice(0, 4).join(", ");
-  const projectPhrase = projects.length
-    ? `with hands-on experience across ${projects.length} project${projects.length > 1 ? "s" : ""}${
-        projects[0]?.title ? `, including ${projects[0].title}` : ""
-      }`
-    : "with project experience detailed below";
-  const skillPhrase = topSkills ? ` Skilled in ${topSkills}.` : "";
-  return `${title} ${projectPhrase}.${skillPhrase}`;
+  const sentences: string[] = [];
+
+  // Sentence 1 — role + core skills, phrased naturally.
+  const top = skills.slice(0, 3);
+  if (top.length >= 2) {
+    sentences.push(`${title} working across ${listPhrase(top)}.`);
+  } else if (top.length === 1) {
+    sentences.push(`${title} with hands-on ${top[0]} experience.`);
+  } else {
+    sentences.push(`${title}.`);
+  }
+
+  // Sentence 2 — projects, with a deployment signal when present.
+  const named = projects.map((p) => p.title).filter(Boolean);
+  const anyDeployed = projects.some((p) => looksDeployed(p.links || []));
+  if (named.length === 1) {
+    sentences.push(`Built ${named[0]}${anyDeployed ? ", a deployed project" : ""}.`);
+  } else if (named.length >= 2) {
+    const lead = named.slice(0, 2);
+    const more = named.length - lead.length;
+    sentences.push(
+      `Built ${listPhrase(lead)}${more > 0 ? `, plus ${more} more` : ""}${
+        anyDeployed ? " — including deployed work" : ""
+      }.`
+    );
+  }
+
+  return sentences.join(" ");
 }
 
 export function buildProjectExplanation(project: { title: string; description: string; links: string[] }): string {
