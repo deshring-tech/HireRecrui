@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getCandidate, getJob } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import NavBar from "@/components/NavBar";
@@ -6,6 +7,23 @@ import DecisionButtons from "@/components/DecisionButtons";
 import EmailCandidateButton from "@/components/EmailCandidateButton";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import { notFound } from "next/navigation";
+
+// Per-profile preview so shared links render a proper card on LinkedIn/WhatsApp/etc.
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const candidate = await getCandidate(params.id);
+  if (!candidate) return { title: "Profile not found" };
+  const { name, title, summary, skills } = candidate.profile;
+  const description =
+    (summary && summary.slice(0, 180)) ||
+    `${title}${skills?.length ? ` — ${skills.slice(0, 5).join(", ")}` : ""}`;
+  const heading = `${name} — ${title}`;
+  return {
+    title: heading,
+    description,
+    openGraph: { type: "profile", title: heading, description },
+    twitter: { card: "summary", title: heading, description },
+  };
+}
 
 export default async function ResumePage({ params }: { params: { id: string } }) {
   const candidate = await getCandidate(params.id);
@@ -20,43 +38,63 @@ export default async function ResumePage({ params }: { params: { id: string } })
   const currentUser = await getCurrentUser();
   const isOwner = currentUser?.id === candidate.recruiterId;
 
+  const initials = profile.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
+
   return (
     <main>
       <NavBar right={<CopyLinkButton />} />
-      <section className="max-w-3xl mx-auto px-6 pb-24 space-y-8">
-        <div className="card p-7">
-          <div className="flex items-start justify-between flex-wrap gap-4">
-            <div>
-              <h1 className="text-2xl font-semibold text-slate-900">{profile.name}</h1>
-              <p className="text-brand-600 font-medium">{profile.title}</p>
+      <section className="max-w-3xl mx-auto px-6 pb-24 space-y-6">
+        <div className="card overflow-hidden">
+          <div className="h-16 bg-gradient-to-r from-brand-500 via-brand-600 to-brand-700" />
+          <div className="px-7 pb-7">
+            <div className="flex items-end gap-4 flex-wrap -mt-8">
+              <div className="avatar w-16 h-16 text-xl ring-4 ring-white">{initials || "🙂"}</div>
+              <div className="flex-1 min-w-[200px] flex items-end justify-between flex-wrap gap-3">
+                <div>
+                  <h1 className="text-2xl font-semibold text-slate-900 leading-tight">{profile.name}</h1>
+                  <p className="text-brand-600 font-medium">{profile.title}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <EmailCandidateButton
+                    recruiterId={candidate.recruiterId}
+                    email={isOwner ? candidate.email : ""}
+                    candidateName={profile.name}
+                    role={jobTitle}
+                    compact
+                  />
+                  <DecisionButtons
+                    candidateId={candidate.id}
+                    recruiterId={candidate.recruiterId}
+                    initialStatus={candidate.status}
+                    compact
+                  />
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <EmailCandidateButton
-                recruiterId={candidate.recruiterId}
-                email={isOwner ? candidate.email : ""}
-                candidateName={profile.name}
-                role={jobTitle}
-                compact
-              />
-              <DecisionButtons
-                candidateId={candidate.id}
-                recruiterId={candidate.recruiterId}
-                initialStatus={candidate.status}
-                compact
-              />
-            </div>
-          </div>
-          <p className="mt-4 text-slate-600 leading-relaxed">{profile.summary}</p>
 
-          {profile.skills?.length > 0 && (
-            <div className="mt-5 flex flex-wrap gap-2">
-              {profile.skills.map((s) => (
-                <span key={s} className="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">
-                  {s}
-                </span>
-              ))}
-            </div>
-          )}
+            {jobTitle && (
+              <span className="inline-block mt-4 text-xs font-medium px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-100">
+                Applying for {jobTitle}
+              </span>
+            )}
+
+            <p className="mt-4 text-slate-600 leading-relaxed">{profile.summary}</p>
+
+            {profile.skills?.length > 0 && (
+              <div className="mt-5 flex flex-wrap gap-2">
+                {profile.skills.map((s) => (
+                  <span key={s} className="skill-chip">
+                    {s}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {(profile.strengths?.length > 0 || profile.growthAreas?.length > 0) && (
@@ -86,7 +124,7 @@ export default async function ResumePage({ params }: { params: { id: string } })
 
         {profile.projects?.length > 0 && (
           <div>
-            <h2 className="font-semibold text-slate-800 mb-3">Projects</h2>
+            <h2 className="section-title">Projects</h2>
             <div className="space-y-4">
               {profile.projects.map((p, i) => (
                 <div key={i} className="card p-5">
@@ -154,7 +192,7 @@ export default async function ResumePage({ params }: { params: { id: string } })
 
         {profile.experience?.length > 0 && (
           <div>
-            <h2 className="font-semibold text-slate-800 mb-3">Experience</h2>
+            <h2 className="section-title">Experience</h2>
             <div className="space-y-4">
               {profile.experience.map((e, i) => (
                 <div key={i} className="card p-5">

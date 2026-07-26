@@ -42,3 +42,15 @@ body {
 .label {
   @apply block text-sm font-medium text-slate-600 mb-1.5;
 }
+
+.avatar {
+  @apply grid place-items-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-white font-semibold shrink-0;
+}
+
+.section-title {
+  @apply text-xs font-semibold uppercase tracking-wide text-slate-400 mb-3;
+}
+
+.skill-chip {
+  @apply text-xs px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-100;
+}
