@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import NavBar from "@/components/NavBar";
@@ -31,6 +31,10 @@ export default function RecruiterPage() {
   const [newTitle, setNewTitle] = useState("");
   const [newReq, setNewReq] = useState("");
   const [requirement, setRequirement] = useState("");
+
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkResult, setBulkResult] = useState<{ created: number; skipped: string[]; hadOpenJobs: boolean } | null>(null);
+  const bulkInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -99,6 +103,26 @@ export default function RecruiterPage() {
       await loadJobs();
     } finally {
       setScoring(false);
+    }
+  }
+
+  async function handleBulkFiles(files: FileList) {
+    if (!files.length) return;
+    setBulkBusy(true);
+    setBulkResult(null);
+    try {
+      const fd = new FormData();
+      Array.from(files).forEach((f) => fd.append("files", f));
+      const res = await fetch("/api/bulk", { method: "POST", body: fd });
+      const data = await res.json();
+      if (res.ok) {
+        setBulkResult({ created: data.created, skipped: data.skipped || [], hadOpenJobs: data.hadOpenJobs });
+        await Promise.all([loadCandidates(), loadJobs()]);
+      } else {
+        setBulkResult({ created: 0, skipped: [data.error || "Upload failed"], hadOpenJobs: true });
+      }
+    } finally {
+      setBulkBusy(false);
     }
   }
 
@@ -236,6 +260,56 @@ export default function RecruiterPage() {
               {scoring ? "Scoring..." : "Score candidates"}
             </button>
           </div>
+        </div>
+
+        {/* Bulk resume upload → auto-match */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <label className="label mb-0">Bulk-upload resumes</label>
+              <p className="text-xs text-slate-400 mt-1">
+                Drop in a stack of resumes (PDF / DOCX / TXT). Each is auto-profiled, scored against your open
+                roles, and routed to the best fit. You make every decision.
+              </p>
+            </div>
+            <button
+              onClick={() => bulkInputRef.current?.click()}
+              disabled={bulkBusy}
+              className="btn-primary shrink-0"
+            >
+              {bulkBusy ? "Processing..." : "⬆ Upload resumes"}
+            </button>
+            <input
+              ref={bulkInputRef}
+              type="file"
+              accept=".pdf,.docx,.txt"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files) handleBulkFiles(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </div>
+
+          {bulkResult && (
+            <div className="mt-4 text-sm rounded-xl bg-slate-50 border border-slate-200 px-4 py-3">
+              <p className="text-slate-700 font-medium">
+                {bulkResult.created > 0
+                  ? `Added ${bulkResult.created} candidate${bulkResult.created > 1 ? "s" : ""}, ranked and routed.`
+                  : "No candidates were added."}
+              </p>
+              {!bulkResult.hadOpenJobs && bulkResult.created > 0 && (
+                <p className="text-amber-600 text-xs mt-1">
+                  You have no open roles yet — candidates were added unassigned. Create a role and click "Score
+                  candidates" to match them.
+                </p>
+              )}
+              {bulkResult.skipped.length > 0 && (
+                <p className="text-slate-400 text-xs mt-1">Skipped: {bulkResult.skipped.join(", ")}</p>
+              )}
+            </div>
+          )}
         </div>
 
         {loading && <p className="text-slate-400 text-sm">Loading candidates...</p>}

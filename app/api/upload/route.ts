@@ -1,41 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rateLimit";
 import { saveUpload } from "@/lib/storage";
+import { extractTextFromBuffer } from "@/lib/extract";
 
 export const runtime = "nodejs";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const MAX_EXTRACTED_CHARS = 4000;
-
-async function extractTextFromBuffer(buffer: Buffer, filename: string): Promise<string> {
-  const name = filename.toLowerCase();
-
-  if (name.endsWith(".pdf")) {
-    const { PDFParse } = await import("pdf-parse");
-    const parser = new PDFParse({ data: buffer });
-    try {
-      const result = await parser.getText();
-      return result.text
-        .replace(/^--\s*\d+\s*of\s*\d+\s*--$/gm, "")
-        .replace(/\n{3,}/g, "\n\n")
-        .trim();
-    } finally {
-      await parser.destroy();
-    }
-  }
-
-  if (name.endsWith(".docx")) {
-    const mammoth = await import("mammoth");
-    const result = await mammoth.extractRawText({ buffer });
-    return result.value.trim();
-  }
-
-  if (name.endsWith(".txt")) {
-    return buffer.toString("utf-8").trim();
-  }
-
-  return "";
-}
 
 export async function POST(req: NextRequest) {
   const limited = rateLimit(req, { bucket: "upload", limit: 30, windowMs: 60_000 });
