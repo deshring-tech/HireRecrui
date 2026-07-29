@@ -5,17 +5,12 @@ export async function extractTextFromBuffer(buffer: Buffer, filename: string): P
   const name = filename.toLowerCase();
 
   if (name.endsWith(".pdf")) {
-    const { PDFParse } = await import("pdf-parse");
-    const parser = new PDFParse({ data: buffer });
-    try {
-      const result = await parser.getText();
-      return result.text
-        .replace(/^--\s*\d+\s*of\s*\d+\s*--$/gm, "")
-        .replace(/\n{3,}/g, "\n\n")
-        .trim();
-    } finally {
-      await parser.destroy();
-    }
+    // unpdf ships a serverless-safe pdfjs build — pdf-parse's pdfjs engine needs
+    // worker/font files that Vercel doesn't bundle into functions, so it fails there.
+    const { extractText, getDocumentProxy } = await import("unpdf");
+    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    const { text } = await extractText(pdf, { mergePages: true });
+    return (Array.isArray(text) ? text.join("\n") : text).replace(/\n{3,}/g, "\n\n").trim();
   }
 
   if (name.endsWith(".docx")) {

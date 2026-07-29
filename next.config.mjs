@@ -1,10 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // pdf-parse pulls in pdfjs-dist, which breaks when webpack bundles it into
-  // the route handler chunk. Load it natively via Node's require instead.
+  // mammoth (DOCX) is loaded natively rather than webpack-bundled. unpdf (PDF) is
+  // serverless-safe and needs no externalization.
   experimental: {
-    serverComponentsExternalPackages: ["pdf-parse", "mammoth"],
+    serverComponentsExternalPackages: ["mammoth"],
   },
 };
 
