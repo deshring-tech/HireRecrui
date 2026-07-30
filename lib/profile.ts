@@ -17,36 +17,70 @@ const TITLE_KEYWORDS = [
   "architect", "consultant", "specialist", "lead", "intern", "administrator",
   "devops", "programmer", "full-stack", "fullstack", "frontend", "front-end",
   "backend", "back-end", "marketer", "recruiter", "product", "qa", "researcher",
+  "accountant", "nurse", "teacher", "writer", "editor", "coordinator", "officer",
+  "director", "executive", "assistant", "technician", "strategist", "operator",
 ];
+
+// Words that appear in resume section headings — a name line never contains these.
+const SECTION_WORDS = [
+  "experience", "education", "skills", "summary", "objective", "profile",
+  "projects", "certification", "certifications", "award", "awards", "achievement",
+  "achievements", "leadership", "reference", "references", "contact", "work",
+  "employment", "professional", "languages", "interests", "activities", "volunteer",
+  "publications", "portfolio", "about", "expertise", "highlights", "career",
+  "resume", "curriculum", "vitae",
+];
+
+// Connector words that show up in headings but essentially never in a person's name.
+const NAME_STOPWORDS = ["and", "or", "of", "the", "for", "with", "to", "in", "at", "&"];
 
 function guessEmail(text: string): string {
   const m = text.match(EMAIL_RE);
   return m ? m[0] : "";
 }
 
+function isLikelyName(line: string): boolean {
+  if (/@|\d|https?:|www\./i.test(line)) return false;
+  const low = line.toLowerCase();
+  if (SECTION_WORDS.some((w) => low.includes(w))) return false;
+  const words = line.split(/\s+/);
+  if (words.length < 2 || words.length > 4) return false;
+  if (words.some((w) => NAME_STOPWORDS.includes(w.toLowerCase()))) return false;
+  // Each word looks like a name token (handles Title Case and ALL CAPS).
+  return words.every((w) => /^[A-Za-z][a-zA-Z.'-]*$/.test(w) && /^[A-Z]/.test(w));
+}
+
 function guessName(text: string, filename: string): string {
   const lines = text.split(/\n/).map((l) => l.trim()).filter(Boolean);
-  for (const line of lines.slice(0, 6)) {
-    if (/@|\d|https?:|www\.|resume|curriculum|vitae/i.test(line)) continue;
-    const words = line.split(/\s+/);
-    if (words.length >= 2 && words.length <= 4 && words.every((w) => /^[A-Z][a-zA-Z.'-]+$/.test(w))) {
-      return line;
-    }
+
+  // 1) First plausible name near the top of the document.
+  for (const line of lines.slice(0, 8)) {
+    if (isLikelyName(line)) return line;
   }
-  // Fall back to a cleaned-up filename.
+  // 2) The line just before the email is very often the name.
+  const emailIdx = lines.findIndex((l) => EMAIL_RE.test(l));
+  if (emailIdx > 0 && isLikelyName(lines[emailIdx - 1])) return lines[emailIdx - 1];
+
+  // 3) Fall back to a cleaned-up filename.
   const fromFile = filename
     .replace(/\.[^.]+$/, "")
     .replace(/[_-]+/g, " ")
-    .replace(/\b(resume|cv|final|updated|copy)\b/gi, "")
+    .replace(/\b(resume|cv|curriculum|vitae|final|updated|copy|professional|simple)\b/gi, "")
+    .replace(/\s+/g, " ")
     .trim();
   return fromFile || "Unnamed candidate";
 }
 
 function guessTitle(text: string, skills: string[]): string {
-  const lines = text.split(/\n/).map((l) => l.trim()).filter(Boolean).slice(0, 12);
+  const lines = text.split(/\n/).map((l) => l.trim()).filter(Boolean).slice(0, 15);
   for (const line of lines) {
     const low = line.toLowerCase();
-    if (line.length <= 60 && !/@|https?:/.test(line) && TITLE_KEYWORDS.some((k) => low.includes(k))) {
+    if (
+      line.length <= 60 &&
+      !/@|https?:/.test(line) &&
+      !SECTION_WORDS.some((w) => low === w || low === `${w}s`) && // skip bare section headers
+      TITLE_KEYWORDS.some((k) => low.includes(k))
+    ) {
       return line;
     }
   }
