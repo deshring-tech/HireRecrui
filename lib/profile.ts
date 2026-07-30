@@ -75,12 +75,12 @@ function guessTitle(text: string, skills: string[]): string {
   const lines = text.split(/\n/).map((l) => l.trim()).filter(Boolean).slice(0, 15);
   for (const line of lines) {
     const low = line.toLowerCase();
-    if (
-      line.length <= 60 &&
-      !/@|https?:/.test(line) &&
-      !SECTION_WORDS.some((w) => low === w || low === `${w}s`) && // skip bare section headers
-      TITLE_KEYWORDS.some((k) => low.includes(k))
-    ) {
+    if (line.length > 60 || /@|https?:/.test(line)) continue;
+    // Any section word anywhere disqualifies the line — "Leadership And
+    // Achievement" is a heading, not a job title.
+    if (SECTION_WORDS.some((w) => new RegExp(`\\b${w}\\b`).test(low))) continue;
+    // Whole-word keyword match, so "leadership" doesn't match the keyword "lead".
+    if (TITLE_KEYWORDS.some((k) => new RegExp(`\\b${k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(low))) {
       return line;
     }
   }
