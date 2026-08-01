@@ -3,6 +3,9 @@ import { getCandidate, updateCandidate, CandidateStatus } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { notifyStatusChange } from "@/lib/notify";
 
+// Never cache: candidate status and view counts change as recruiters act.
+export const dynamic = "force-dynamic";
+
 const VALID_STATUS: CandidateStatus[] = ["new", "accepted", "rejected", "interview"];
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {

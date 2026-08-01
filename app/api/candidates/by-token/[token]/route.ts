@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCandidateByEditToken } from "@/lib/db";
 
+// Never cache: this route reports live status/view counts. A cached response
+// would show the candidate stale information indefinitely.
+export const dynamic = "force-dynamic";
+
 // Lets a candidate reload their own submission into the wizard to edit it.
 // The unguessable edit token is the authorization — no login required.
 export async function GET(_req: NextRequest, { params }: { params: { token: string } }) {
