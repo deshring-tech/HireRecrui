@@ -18,7 +18,16 @@ function db(): SupabaseClient {
     client = createClient(
       process.env.SUPABASE_URL as string,
       process.env.SUPABASE_SERVICE_ROLE_KEY as string,
-      { auth: { persistSession: false } }
+      {
+        auth: { persistSession: false },
+        global: {
+          // Next.js patches global fetch and caches GET requests by default, which
+          // makes supabase-js hand back stale rows (e.g. a candidate still showing
+          // "awaiting review" after the recruiter decided). Database reads must
+          // always hit the database.
+          fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
+        },
+      }
     );
   }
   return client;
