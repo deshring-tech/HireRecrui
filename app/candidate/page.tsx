@@ -25,9 +25,11 @@ function CandidateEntry() {
   const recruiterId = searchParams.get("r") || "";
   const jobId = searchParams.get("job") || "";
 
-  const [ctx, setCtx] = useState<{ valid: boolean; recruiterName?: string; job?: { id: string; title: string } | null } | null>(
-    null
-  );
+  const [ctx, setCtx] = useState<{
+    valid: boolean;
+    recruiterName?: string;
+    job?: { id: string; title: string; salaryRange?: string } | null;
+  } | null>(null);
 
   useEffect(() => {
     // No recruiter link → self-serve mode (candidate builds a free-floating profile).
@@ -69,6 +71,7 @@ function CandidateEntry() {
             jobId={ctx.job?.id}
             recruiterName={ctx.recruiterName}
             jobTitle={ctx.job?.title}
+            salaryRange={ctx.job?.salaryRange}
           />
         )}
 

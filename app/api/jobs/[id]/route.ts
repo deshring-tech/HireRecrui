@@ -13,9 +13,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 
   const body = await req.json();
-  const patch: { title?: string; requirement?: string; status?: "open" | "closed" } = {};
+  const patch: { title?: string; requirement?: string; salaryRange?: string; status?: "open" | "closed" } = {};
   if (typeof body.title === "string" && body.title.trim()) patch.title = body.title.trim();
   if (typeof body.requirement === "string") patch.requirement = body.requirement;
+  if (typeof body.salaryRange === "string") patch.salaryRange = body.salaryRange.trim();
   if (body.status === "open" || body.status === "closed") patch.status = body.status;
 
   const updated = await updateJob(params.id, patch);

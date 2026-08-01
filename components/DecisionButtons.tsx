@@ -32,6 +32,7 @@ export default function DecisionButtons({
   const [status, setStatus] = useState<Status>(initialStatus);
   const [busy, setBusy] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
+  const [confirmingReject, setConfirmingReject] = useState(false);
 
   useEffect(() => {
     if (!recruiterId) return; // self-serve profile — no owning recruiter
@@ -41,14 +42,15 @@ export default function DecisionButtons({
       .catch(() => setIsOwner(false));
   }, [recruiterId]);
 
-  async function decide(next: Status) {
+  async function decide(next: Status, sendFeedback = false) {
     setBusy(true);
     setStatus(next);
+    setConfirmingReject(false);
     try {
       await fetch(`/api/candidates/${candidateId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: next }),
+        body: JSON.stringify({ status: next, sendFeedback }),
       });
     } finally {
       setBusy(false);
@@ -78,14 +80,41 @@ export default function DecisionButtons({
           >
             👤 Interview
           </button>
-          <button
-            onClick={() => decide("rejected")}
-            disabled={busy}
-            className="btn-danger !px-3 !py-1.5 text-xs"
-            title="Reject candidate"
-          >
-            ✕ Reject
-          </button>
+          {confirmingReject ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => decide("rejected", true)}
+                disabled={busy}
+                className="btn-danger !px-3 !py-1.5 text-xs"
+                title="Reject and email the candidate constructive feedback"
+              >
+                Reject + send feedback
+              </button>
+              <button
+                onClick={() => decide("rejected", false)}
+                disabled={busy}
+                className="btn-secondary !px-3 !py-1.5 text-xs"
+                title="Reject without feedback"
+              >
+                Reject only
+              </button>
+              <button
+                onClick={() => setConfirmingReject(false)}
+                className="text-xs text-slate-400 hover:text-slate-600"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmingReject(true)}
+              disabled={busy}
+              className="btn-danger !px-3 !py-1.5 text-xs"
+              title="Reject candidate"
+            >
+              ✕ Reject
+            </button>
+          )}
         </div>
       )}
     </div>

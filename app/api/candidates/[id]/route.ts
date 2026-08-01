@@ -32,7 +32,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
   // Notify the candidate only when the decision actually changed.
   if (updated && status && status !== existing.status && status !== "new") {
-    await notifyStatusChange(updated, status, body.decisionReason);
+    await notifyStatusChange(updated, status, body.decisionReason, Boolean(body.sendFeedback));
   }
 
   return NextResponse.json({ candidate: updated });

@@ -3,10 +3,21 @@
 import { useEffect, useState } from "react";
 import NavBar from "@/components/NavBar";
 import CandidateWizard, { WizardInitial } from "@/components/CandidateWizard";
+import CandidateStatusPanel from "@/components/CandidateStatusPanel";
+
+type StatusInfo = {
+  id: string;
+  status: "new" | "accepted" | "rejected" | "interview";
+  viewCount: number;
+  viewedAt: string | null;
+  decisionReason: string | null;
+  hasRecruiter: boolean;
+};
 
 export default function EditCandidatePage({ params }: { params: { token: string } }) {
   const [state, setState] = useState<"loading" | "notfound" | "ready">("loading");
   const [initial, setInitial] = useState<WizardInitial | null>(null);
+  const [info, setInfo] = useState<StatusInfo | null>(null);
 
   useEffect(() => {
     fetch(`/api/candidates/by-token/${params.token}`)
@@ -21,10 +32,20 @@ export default function EditCandidatePage({ params }: { params: { token: string 
           projects: c.projects,
           style: c.style,
         });
+        setInfo({
+          id: c.id,
+          status: c.status,
+          viewCount: c.viewCount ?? 0,
+          viewedAt: c.viewedAt ?? null,
+          decisionReason: c.decisionReason ?? null,
+          hasRecruiter: Boolean(c.hasRecruiter),
+        });
         setState("ready");
       })
       .catch(() => setState("notfound"));
   }, [params.token]);
+
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
 
   return (
     <main>
@@ -35,6 +56,16 @@ export default function EditCandidatePage({ params }: { params: { token: string 
           <div className="text-sm bg-rose-50 text-rose-600 border border-rose-100 rounded-xl px-4 py-3">
             This edit link is no longer valid.
           </div>
+        )}
+        {state === "ready" && info && (
+          <CandidateStatusPanel
+            status={info.status}
+            viewCount={info.viewCount}
+            viewedAt={info.viewedAt}
+            decisionReason={info.decisionReason}
+            hasRecruiter={info.hasRecruiter}
+            profileUrl={`${origin}/r/${info.id}`}
+          />
         )}
         {state === "ready" && initial && (
           <CandidateWizard mode="edit" editToken={params.token} initial={initial} />

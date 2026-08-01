@@ -12,11 +12,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ valid: false });
   }
 
-  let job = null;
+  let job: { id: string; title: string; salaryRange: string } | null = null;
   if (jobId) {
     const j = await getJob(jobId);
     if (j && j.recruiterId === recruiter.id && j.status === "open") {
-      job = { id: j.id, title: j.title };
+      job = { id: j.id, title: j.title, salaryRange: j.salaryRange || "" };
     }
   }
 

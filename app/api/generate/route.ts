@@ -21,6 +21,7 @@ import {
 } from "@/lib/algo";
 import { notifyNewCandidate } from "@/lib/notify";
 import { rateLimit } from "@/lib/rateLimit";
+import { verifyLinks } from "@/lib/verifyLinks";
 
 type ProjectDraft = {
   title: string;
@@ -140,7 +141,16 @@ Return strict JSON matching this shape exactly, no extra keys, no markdown.`,
     documents: fp.documents,
   }));
 
-  const finalProfile = { ...fallback, ...profile, name, title, projects: mergedProjects };
+  // Confirm which project links actually resolve — verified evidence beats claims.
+  const verifiedPerProject = await Promise.all(
+    mergedProjects.map((p) => verifyLinks(p.links || []))
+  );
+  const projectsWithProof = mergedProjects.map((p, i) => ({
+    ...p,
+    verifiedLinks: verifiedPerProject[i],
+  }));
+
+  const finalProfile = { ...fallback, ...profile, name, title, projects: projectsWithProof };
   const now = new Date().toISOString();
 
   if (existing) {

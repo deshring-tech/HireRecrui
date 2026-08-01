@@ -30,6 +30,7 @@ export default function RecruiterPage() {
   const [creating, setCreating] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newReq, setNewReq] = useState("");
+  const [newSalary, setNewSalary] = useState("");
   const [requirement, setRequirement] = useState("");
 
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -74,7 +75,7 @@ export default function RecruiterPage() {
     const res = await fetch("/api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: newTitle, requirement: newReq }),
+      body: JSON.stringify({ title: newTitle, requirement: newReq, salaryRange: newSalary }),
     });
     const data = await res.json();
     if (res.ok) {
@@ -82,6 +83,7 @@ export default function RecruiterPage() {
       setActiveJob(data.job.id);
       setNewTitle("");
       setNewReq("");
+      setNewSalary("");
       setCreating(false);
     }
   }
@@ -146,6 +148,14 @@ export default function RecruiterPage() {
   const countFor = (jobId: string | null) =>
     candidates.filter((c) => (jobId === null ? !c.jobId : c.jobId === jobId)).length;
 
+  // Candidates still unreviewed after a week. 75% of applications never get a
+  // reply — surfacing the backlog is the cheapest way not to be part of that.
+  const STALE_DAYS = 7;
+  const staleCutoff = Date.now() - STALE_DAYS * 24 * 60 * 60 * 1000;
+  const isStale = (c: Candidate) =>
+    c.status === "new" && new Date(c.createdAt).getTime() < staleCutoff;
+  const staleCount = candidates.filter(isStale).length;
+
   if (!user) {
     return (
       <main>
@@ -172,6 +182,15 @@ export default function RecruiterPage() {
           <h1 className="text-2xl font-semibold text-slate-900">Recruiter dashboard</h1>
           <p className="text-slate-500 text-sm mt-1">Screen every candidate's real work in a couple of clicks.</p>
         </div>
+
+        {staleCount > 0 && (
+          <div className="text-sm bg-amber-50 text-amber-800 border border-amber-200 rounded-xl px-4 py-3">
+            <span className="font-medium">
+              {staleCount} candidate{staleCount > 1 ? "s have" : " has"} been waiting over {STALE_DAYS} days
+            </span>{" "}
+            without a decision. A quick accept, interview, or reject keeps them from being ghosted.
+          </div>
+        )}
 
         {/* Role selector */}
         <div className="flex items-center gap-2 flex-wrap">
@@ -213,6 +232,18 @@ export default function RecruiterPage() {
                 value={newReq}
                 onChange={(e) => setNewReq(e.target.value)}
               />
+            </div>
+            <div>
+              <label className="label">Salary range</label>
+              <input
+                className="input"
+                placeholder="e.g. ₹12–18 LPA  ·  $90k–120k"
+                value={newSalary}
+                onChange={(e) => setNewSalary(e.target.value)}
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                Optional, but 72% of candidates skip roles with no salary listed.
+              </p>
             </div>
             <div className="flex gap-2">
               <button onClick={createJob} disabled={!newTitle.trim()} className="btn-primary">
@@ -334,6 +365,19 @@ export default function RecruiterPage() {
                     {c.score && (
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${SCORE_STYLE[c.score.label]}`}>
                         {c.score.label} · {c.score.value}
+                      </span>
+                    )}
+                    {isStale(c) && (
+                      <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                        ⏳ waiting {Math.floor((Date.now() - new Date(c.createdAt).getTime()) / 86400000)}d
+                      </span>
+                    )}
+                    {(c.profile.projects || []).some((p) => p.verifiedLinks?.length) && (
+                      <span
+                        className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        title="This candidate has project links that load successfully"
+                      >
+                        ✓ verified work
                       </span>
                     )}
                   </div>

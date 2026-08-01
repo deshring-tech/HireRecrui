@@ -6,6 +6,7 @@ import AskBox from "@/components/AskBox";
 import DecisionButtons from "@/components/DecisionButtons";
 import EmailCandidateButton from "@/components/EmailCandidateButton";
 import CopyLinkButton from "@/components/CopyLinkButton";
+import ProfileViewTracker from "@/components/ProfileViewTracker";
 import { notFound } from "next/navigation";
 
 // Per-profile preview so shared links render a proper card on LinkedIn/WhatsApp/etc.
@@ -45,6 +46,11 @@ export default async function ResumePage({ params }: { params: { id: string } })
     .map((w) => w[0]?.toUpperCase())
     .join("");
 
+  const verifiedCount = (profile.projects || []).reduce(
+    (n, p) => n + (p.verifiedLinks?.length || 0),
+    0
+  );
+
   return (
     <main>
       <NavBar right={<CopyLinkButton />} />
@@ -77,11 +83,21 @@ export default async function ResumePage({ params }: { params: { id: string } })
               </div>
             </div>
 
-            {jobTitle && (
-              <span className="inline-block mt-4 text-xs font-medium px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-100">
-                Applying for {jobTitle}
-              </span>
-            )}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {jobTitle && (
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 border border-brand-100">
+                  Applying for {jobTitle}
+                </span>
+              )}
+              {verifiedCount > 0 && (
+                <span
+                  className="text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"
+                  title="These project links were checked and load successfully"
+                >
+                  ✓ {verifiedCount} verified {verifiedCount === 1 ? "link" : "links"}
+                </span>
+              )}
+            </div>
 
             <p className="mt-4 text-slate-600 leading-relaxed">{profile.summary}</p>
 
@@ -130,18 +146,27 @@ export default async function ResumePage({ params }: { params: { id: string } })
                 <div key={i} className="card p-5">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <h3 className="font-medium text-slate-900">{p.title}</h3>
-                    <div className="flex gap-2">
-                      {p.links?.map((l, li) => (
-                        <a
-                          key={li}
-                          href={l.startsWith("http") ? l : `https://${l}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs px-2.5 py-1 rounded-full bg-brand-50 text-brand-700 hover:bg-brand-100"
-                        >
-                          {l.replace(/^https?:\/\//, "").split("/")[0]}
-                        </a>
-                      ))}
+                    <div className="flex gap-2 flex-wrap">
+                      {p.links?.map((l, li) => {
+                        const verified = p.verifiedLinks?.includes(l);
+                        return (
+                          <a
+                            key={li}
+                            href={l.startsWith("http") ? l : `https://${l}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            title={verified ? "Link verified — this loads successfully" : undefined}
+                            className={`text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1 ${
+                              verified
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100"
+                                : "bg-brand-50 text-brand-700 hover:bg-brand-100"
+                            }`}
+                          >
+                            {verified && <span aria-hidden>✓</span>}
+                            {l.replace(/^https?:\/\//, "").split("/")[0]}
+                          </a>
+                        );
+                      })}
                     </div>
                   </div>
                   <p className="text-sm text-slate-600 mt-2">{p.description}</p>
@@ -215,6 +240,7 @@ export default async function ResumePage({ params }: { params: { id: string } })
 
         <AskBox candidateId={candidate.id} />
       </section>
+      <ProfileViewTracker candidateId={candidate.id} />
     </main>
   );
 }

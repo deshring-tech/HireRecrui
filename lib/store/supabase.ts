@@ -43,6 +43,8 @@ function candidateFromRow(r: any): Candidate {
     score: r.score ?? undefined,
     status: r.status,
     decisionReason: r.decision_reason ?? undefined,
+    viewedAt: r.viewed_at ?? null,
+    viewCount: r.view_count ?? 0,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -65,6 +67,8 @@ function candidateToRow(c: Partial<Candidate>): Record<string, unknown> {
   if (c.score !== undefined) row.score = c.score;
   if (c.status !== undefined) row.status = c.status;
   if (c.decisionReason !== undefined) row.decision_reason = c.decisionReason;
+  if (c.viewedAt !== undefined) row.viewed_at = c.viewedAt;
+  if (c.viewCount !== undefined) row.view_count = c.viewCount;
   if (c.createdAt !== undefined) row.created_at = c.createdAt;
   if (c.updatedAt !== undefined) row.updated_at = c.updatedAt;
   return row;
@@ -76,6 +80,7 @@ function jobFromRow(r: any): Job {
     recruiterId: r.recruiter_id,
     title: r.title,
     requirement: r.requirement,
+    salaryRange: r.salary_range ?? "",
     status: r.status,
     createdAt: r.created_at,
   };
@@ -103,6 +108,13 @@ function notificationFromRow(r: any): Notification {
   };
 }
 
+// Postgres errors (missing column, constraint violation, RLS) come back in the
+// response body rather than as thrown exceptions. Without this, a failed write
+// would return 200 and the caller would think data was saved when it wasn't.
+function assertOk(op: string, error: { message: string } | null): void {
+  if (error) throw new Error(`Supabase ${op} failed: ${error.message}`);
+}
+
 export const supabaseStore: Store = {
   async listCandidates(recruiterId) {
     const { data } = await db()
@@ -121,15 +133,17 @@ export const supabaseStore: Store = {
     return data ? candidateFromRow(data) : undefined;
   },
   async addCandidate(c) {
-    await db().from("candidates").insert(candidateToRow(c));
+    const { error } = await db().from("candidates").insert(candidateToRow(c));
+    assertOk("addCandidate", error);
   },
   async updateCandidate(id, patch) {
-    const { data } = await db()
+    const { data, error } = await db()
       .from("candidates")
       .update(candidateToRow(patch))
       .eq("id", id)
       .select("*")
       .maybeSingle();
+    assertOk("updateCandidate", error);
     return data ? candidateFromRow(data) : undefined;
   },
 
@@ -146,21 +160,25 @@ export const supabaseStore: Store = {
     return data ? jobFromRow(data) : undefined;
   },
   async addJob(j) {
-    await db().from("jobs").insert({
+    const { error } = await db().from("jobs").insert({
       id: j.id,
       recruiter_id: j.recruiterId,
       title: j.title,
       requirement: j.requirement,
+      salary_range: j.salaryRange ?? "",
       status: j.status,
       created_at: j.createdAt,
     });
+    assertOk("addJob", error);
   },
   async updateJob(id, patch) {
     const row: Record<string, unknown> = {};
     if (patch.title !== undefined) row.title = patch.title;
     if (patch.requirement !== undefined) row.requirement = patch.requirement;
+    if (patch.salaryRange !== undefined) row.salary_range = patch.salaryRange;
     if (patch.status !== undefined) row.status = patch.status;
-    const { data } = await db().from("jobs").update(row).eq("id", id).select("*").maybeSingle();
+    const { data, error } = await db().from("jobs").update(row).eq("id", id).select("*").maybeSingle();
+    assertOk("updateJob", error);
     return data ? jobFromRow(data) : undefined;
   },
 
@@ -177,25 +195,30 @@ export const supabaseStore: Store = {
     return data ? userFromRow(data) : undefined;
   },
   async addUser(u) {
-    await db().from("users").insert({
+    const { error } = await db().from("users").insert({
       id: u.id,
       email: u.email,
       password_hash: u.passwordHash,
       name: u.name,
       created_at: u.createdAt,
     });
+    assertOk("addUser", error);
   },
   async updateUser(id, patch) {
     const row: Record<string, unknown> = {};
     if (patch.email !== undefined) row.email = patch.email;
     if (patch.passwordHash !== undefined) row.password_hash = patch.passwordHash;
     if (patch.name !== undefined) row.name = patch.name;
-    const { data } = await db().from("users").update(row).eq("id", id).select("*").maybeSingle();
+    const { data, error } = await db().from("users").update(row).eq("id", id).select("*").maybeSingle();
+    assertOk("updateUser", error);
     return data ? userFromRow(data) : undefined;
   },
 
   async addSession(s) {
-    await db().from("sessions").insert({ token: s.token, user_id: s.userId, created_at: s.createdAt });
+    const { error } = await db()
+      .from("sessions")
+      .insert({ token: s.token, user_id: s.userId, created_at: s.createdAt });
+    assertOk("addSession", error);
   },
   async getSession(token) {
     const { data } = await db().from("sessions").select("*").eq("token", token).maybeSingle();
@@ -207,7 +230,10 @@ export const supabaseStore: Store = {
 
   async addResetToken(t) {
     await db().from("reset_tokens").delete().eq("user_id", t.userId);
-    await db().from("reset_tokens").insert({ token: t.token, user_id: t.userId, expires_at: t.expiresAt });
+    const { error } = await db()
+      .from("reset_tokens")
+      .insert({ token: t.token, user_id: t.userId, expires_at: t.expiresAt });
+    assertOk("addResetToken", error);
   },
   async getResetToken(token) {
     const { data } = await db().from("reset_tokens").select("*").eq("token", token).maybeSingle();
@@ -218,7 +244,7 @@ export const supabaseStore: Store = {
   },
 
   async addNotification(n) {
-    await db().from("notifications").insert({
+    const { error } = await db().from("notifications").insert({
       id: n.id,
       audience: n.audience,
       type: n.type,
@@ -227,6 +253,7 @@ export const supabaseStore: Store = {
       read: n.read,
       created_at: n.createdAt,
     });
+    assertOk("addNotification", error);
   },
   async listNotifications(audience) {
     const { data } = await db()

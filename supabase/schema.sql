@@ -26,6 +26,7 @@ create table if not exists jobs (
   recruiter_id uuid not null references users(id) on delete cascade,
   title text not null,
   requirement text not null default '',
+  salary_range text not null default '',
   status text not null default 'open' check (status in ('open', 'closed')),
   created_at timestamptz not null default now()
 );
@@ -47,6 +48,9 @@ create table if not exists candidates (
   score jsonb,
   status text not null default 'new' check (status in ('new', 'accepted', 'rejected', 'interview')),
   decision_reason text,
+  -- transparency: when a recruiter first opened this profile, and total views
+  viewed_at timestamptz,
+  view_count integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

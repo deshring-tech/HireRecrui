@@ -23,6 +23,9 @@ export type ProjectProfile = {
   documents: DocumentRef[];
   impact: string;
   aiExplanation: string;
+  // Links confirmed reachable at profile-build time — the "verified evidence"
+  // signal that separates real work from unverifiable resume claims.
+  verifiedLinks?: string[];
 };
 
 export type ResumeProfile = {
@@ -60,6 +63,9 @@ export type Candidate = {
   score?: Score;
   status: CandidateStatus;
   decisionReason?: string;
+  // Transparency: when a recruiter first opened this profile, and total views.
+  viewedAt?: string | null;
+  viewCount?: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -89,6 +95,7 @@ export type Job = {
   recruiterId: string;
   title: string;
   requirement: string;
+  salaryRange?: string;
   status: "open" | "closed";
   createdAt: string;
 };

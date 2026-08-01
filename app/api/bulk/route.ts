@@ -5,7 +5,7 @@ import { rateLimit } from "@/lib/rateLimit";
 import { extractTextFromBuffer } from "@/lib/extract";
 import { buildProfileFromResume } from "@/lib/profile";
 import { scoreCandidateAlgorithmic } from "@/lib/algo";
-import { addCandidate, listJobs, Candidate, Score } from "@/lib/db";
+import { addCandidate, listCandidates, listJobs, Candidate, Score } from "@/lib/db";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -34,6 +34,11 @@ export async function POST(req: NextRequest) {
   // The recruiter's open roles — each candidate is routed to the best-fitting one.
   const openJobs = (await listJobs(user.id)).filter((j) => j.status === "open");
 
+  // Existing emails, so re-uploading the same resume doesn't create duplicates.
+  const seenEmails = new Set(
+    (await listCandidates(user.id)).map((c) => c.email?.toLowerCase()).filter(Boolean) as string[]
+  );
+
   const results: { name: string; title: string; job: string | null; score: number; label: string }[] = [];
   const skipped: string[] = [];
 
@@ -57,6 +62,14 @@ export async function POST(req: NextRequest) {
     }
 
     const { name, title, email, profile } = buildProfileFromResume(text, file.name);
+
+    // Skip re-uploads of a candidate already in this recruiter's pool.
+    const emailKey = email?.toLowerCase();
+    if (emailKey && seenEmails.has(emailKey)) {
+      skipped.push(`${file.name} (already in your pool)`);
+      continue;
+    }
+    if (emailKey) seenEmails.add(emailKey);
 
     // Score against every open role; route to the highest match. With no open
     // roles the candidate is left unassigned with a neutral baseline score.

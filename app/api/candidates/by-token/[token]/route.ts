@@ -16,6 +16,12 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
       rawResume: candidate.rawResume,
       projects: candidate.projects,
       style: candidate.style,
+      // Transparency for the candidate: where they stand and whether anyone looked.
+      status: candidate.status,
+      viewCount: candidate.viewCount || 0,
+      viewedAt: candidate.viewedAt || null,
+      decisionReason: candidate.decisionReason || null,
+      hasRecruiter: Boolean(candidate.recruiterId),
     },
   });
 }

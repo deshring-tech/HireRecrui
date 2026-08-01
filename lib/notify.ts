@@ -32,14 +32,59 @@ export async function notifyNewCandidate(candidate: Candidate): Promise<void> {
   });
 }
 
+// Fired the first time the hiring recruiter opens a candidate's profile.
+export async function notifyProfileViewed(candidate: Candidate): Promise<void> {
+  const message = "A recruiter opened your profile.";
+
+  await addNotification({
+    id: randomUUID(),
+    audience: `candidate:${candidate.id}`,
+    type: "status_change",
+    message,
+    candidateId: candidate.id,
+    read: false,
+    createdAt: new Date().toISOString(),
+  });
+
+  if (candidate.email) {
+    await sendEmail({
+      to: candidate.email,
+      subject: "A recruiter viewed your profile",
+      body: `${message} You'll be notified again if your status changes.`,
+    });
+  }
+}
+
+// Turns the data we already computed (match reasons + growth areas) into
+// constructive feedback, so a rejection carries something useful instead of
+// silence. Kept factual and tied to the role — never a judgement of the person.
+export function buildFeedback(candidate: Candidate): string {
+  const parts: string[] = [];
+  const gaps = (candidate.score?.reasons || []).filter((r) => /no evidence|not found|missing/i.test(r));
+  if (gaps.length) parts.push(`Against this role's requirements: ${gaps.join(" ")}`);
+
+  const growth = candidate.profile?.growthAreas || [];
+  if (growth.length) parts.push(`Ways to strengthen your profile: ${growth.join(" ")}`);
+
+  return parts.join(" ");
+}
+
 // Fired when a recruiter accepts / rejects / requests an interview.
 export async function notifyStatusChange(
   candidate: Candidate,
   status: CandidateStatus,
-  decisionReason?: string
+  decisionReason?: string,
+  includeFeedback = false
 ): Promise<void> {
   const base = STATUS_MESSAGE[status] || "Your profile status was updated.";
-  const message = decisionReason ? `${base} Note from the recruiter: ${decisionReason}` : base;
+  const feedback = includeFeedback ? buildFeedback(candidate) : "";
+  const message = [
+    base,
+    decisionReason ? `Note from the recruiter: ${decisionReason}` : "",
+    feedback,
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   await addNotification({
     id: randomUUID(),

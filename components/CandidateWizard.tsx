@@ -61,6 +61,7 @@ export default function CandidateWizard({
   editToken,
   recruiterName,
   jobTitle,
+  salaryRange,
   initial,
 }: {
   mode: "create" | "edit";
@@ -69,6 +70,7 @@ export default function CandidateWizard({
   editToken?: string;
   recruiterName?: string;
   jobTitle?: string;
+  salaryRange?: string;
   initial?: WizardInitial;
 }) {
   const [step, setStep] = useState<1 | 2>(1);
@@ -291,6 +293,9 @@ export default function CandidateWizard({
             </>
           ) : (
             <>Your profile will be sent to {recruiterName}.</>
+          )}
+          {salaryRange && (
+            <div className="mt-1.5 font-medium">💰 {salaryRange}</div>
           )}
         </div>
       )}
@@ -525,21 +530,31 @@ export default function CandidateWizard({
           </div>
 
           {mode === "create" && (
-            <label className="flex items-start gap-3 text-sm text-slate-600">
-              <input
-                type="checkbox"
-                checked={consent}
-                onChange={(e) => setConsent(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-500 focus:ring-brand-100"
-              />
-              <span>
-                I consent to my resume and uploaded materials being processed by AI to generate an interactive,
-                shareable profile.{" "}
-                {recruiterName
-                  ? "It will be shared with the recruiter above, and I understand a human makes the final hiring decision."
-                  : "I control who I share the link with."}
-              </span>
-            </label>
+            <div className="space-y-3">
+              <div className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                <p className="font-medium text-slate-700 mb-1">How AI is used here</p>
+                <p>
+                  AI structures what you provide into a readable profile and suggests a match score for recruiters.
+                  It does <strong>not</strong> auto-reject anyone — every accept, interview, and reject decision is
+                  made by a human. You can edit or update your profile at any time with your private link.
+                </p>
+              </div>
+              <label className="flex items-start gap-3 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-500 focus:ring-brand-100"
+                />
+                <span>
+                  I consent to my resume and uploaded materials being processed by AI to generate an interactive,
+                  shareable profile.{" "}
+                  {recruiterName
+                    ? "It will be shared with the recruiter above, and I understand a human makes the final hiring decision."
+                    : "I control who I share the link with."}
+                </span>
+              </label>
+            </div>
           )}
 
           {submitError && <p className="text-sm text-rose-500">{submitError}</p>}
