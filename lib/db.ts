@@ -34,6 +34,10 @@ export const addCandidate = (c: Candidate) => getStore().addCandidate(c);
 export const updateCandidate = (id: string, patch: Partial<Candidate>) =>
   getStore().updateCandidate(id, patch);
 
+// matching pool (cross-recruiter, opt-in only)
+export const listOpenToMatchingCandidates = () => getStore().listOpenToMatchingCandidates();
+export const listAllOpenJobs = () => getStore().listAllOpenJobs();
+
 // jobs
 export const listJobs = (recruiterId: string) => getStore().listJobs(recruiterId);
 export const getJob = (id: string) => getStore().getJob(id);

@@ -52,6 +52,7 @@ export type WizardInitial = {
   rawResume: string;
   projects: ProjectInput[];
   style: "ats" | "modern" | "technical";
+  openToMatching?: boolean;
 };
 
 export default function CandidateWizard({
@@ -80,6 +81,7 @@ export default function CandidateWizard({
   const [resumeFileName, setResumeFileName] = useState("");
   const [submitError, setSubmitError] = useState("");
   const [consent, setConsent] = useState(mode === "edit");
+  const [openToMatching, setOpenToMatching] = useState(initial?.openToMatching ?? false);
   const [done, setDone] = useState<{ id: string; editToken: string } | null>(null);
 
   const [name, setName] = useState(initial?.name || "");
@@ -231,6 +233,7 @@ export default function CandidateWizard({
           jobId,
           editToken,
           consent,
+          openToMatching,
         }),
       });
       const data = await res.json();
@@ -556,6 +559,20 @@ export default function CandidateWizard({
               </label>
             </div>
           )}
+
+          <label className="flex items-start gap-3 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={openToMatching}
+              onChange={(e) => setOpenToMatching(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-brand-500 focus:ring-brand-100"
+            />
+            <span>
+              <strong className="text-slate-700">Match me to other open roles.</strong> Let recruiters on HireFlow
+              discover my profile and contact me about roles I'm a strong fit for. I'll also see matching roles on my
+              own page. You can turn this off any time.
+            </span>
+          </label>
 
           {submitError && <p className="text-sm text-rose-500">{submitError}</p>}
 

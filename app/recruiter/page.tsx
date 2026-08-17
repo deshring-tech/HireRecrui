@@ -8,6 +8,7 @@ import DecisionButtons from "@/components/DecisionButtons";
 import EmailCandidateButton from "@/components/EmailCandidateButton";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import NotificationBell from "@/components/NotificationBell";
+import TalentPoolMatches from "@/components/TalentPoolMatches";
 import type { Candidate, Job } from "@/lib/db";
 
 const SCORE_STYLE: Record<string, string> = {
@@ -342,6 +343,8 @@ export default function RecruiterPage() {
             </div>
           )}
         </div>
+
+        <TalentPoolMatches />
 
         {loading && <p className="text-slate-400 text-sm">Loading candidates...</p>}
 

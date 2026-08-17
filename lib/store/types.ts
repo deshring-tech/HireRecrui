@@ -66,6 +66,8 @@ export type Candidate = {
   // Transparency: when a recruiter first opened this profile, and total views.
   viewedAt?: string | null;
   viewCount?: number;
+  // Opt-in: lets recruiters other than the owner discover this profile via matching.
+  openToMatching?: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -117,6 +119,10 @@ export interface Store {
   getCandidateByEditToken(token: string): Promise<Candidate | undefined>;
   addCandidate(c: Candidate): Promise<void>;
   updateCandidate(id: string, patch: Partial<Candidate>): Promise<Candidate | undefined>;
+
+  // matching pool (cross-recruiter, opt-in only)
+  listOpenToMatchingCandidates(): Promise<Candidate[]>;
+  listAllOpenJobs(): Promise<Job[]>;
 
   // jobs
   listJobs(recruiterId: string): Promise<Job[]>;

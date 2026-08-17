@@ -86,6 +86,17 @@ export const jsonStore: Store = {
     });
   },
 
+  async listOpenToMatchingCandidates() {
+    return readDB()
+      .candidates.filter((c) => c.openToMatching)
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+  async listAllOpenJobs() {
+    return readDB()
+      .jobs.filter((j) => j.status === "open")
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+
   async listJobs(recruiterId) {
     return readDB()
       .jobs.filter((j) => j.recruiterId === recruiterId)

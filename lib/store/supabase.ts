@@ -54,6 +54,7 @@ function candidateFromRow(r: any): Candidate {
     decisionReason: r.decision_reason ?? undefined,
     viewedAt: r.viewed_at ?? null,
     viewCount: r.view_count ?? 0,
+    openToMatching: r.open_to_matching ?? false,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -78,6 +79,7 @@ function candidateToRow(c: Partial<Candidate>): Record<string, unknown> {
   if (c.decisionReason !== undefined) row.decision_reason = c.decisionReason;
   if (c.viewedAt !== undefined) row.viewed_at = c.viewedAt;
   if (c.viewCount !== undefined) row.view_count = c.viewCount;
+  if (c.openToMatching !== undefined) row.open_to_matching = c.openToMatching;
   if (c.createdAt !== undefined) row.created_at = c.createdAt;
   if (c.updatedAt !== undefined) row.updated_at = c.updatedAt;
   return row;
@@ -154,6 +156,23 @@ export const supabaseStore: Store = {
       .maybeSingle();
     assertOk("updateCandidate", error);
     return data ? candidateFromRow(data) : undefined;
+  },
+
+  async listOpenToMatchingCandidates() {
+    const { data } = await db()
+      .from("candidates")
+      .select("*")
+      .eq("open_to_matching", true)
+      .order("created_at", { ascending: false });
+    return (data ?? []).map(candidateFromRow);
+  },
+  async listAllOpenJobs() {
+    const { data } = await db()
+      .from("jobs")
+      .select("*")
+      .eq("status", "open")
+      .order("created_at", { ascending: false });
+    return (data ?? []).map(jobFromRow);
   },
 
   async listJobs(recruiterId) {

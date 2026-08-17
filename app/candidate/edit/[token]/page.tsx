@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import NavBar from "@/components/NavBar";
 import CandidateWizard, { WizardInitial } from "@/components/CandidateWizard";
 import CandidateStatusPanel from "@/components/CandidateStatusPanel";
+import MatchingRoles from "@/components/MatchingRoles";
 
 type StatusInfo = {
   id: string;
@@ -12,6 +13,7 @@ type StatusInfo = {
   viewedAt: string | null;
   decisionReason: string | null;
   hasRecruiter: boolean;
+  openToMatching: boolean;
 };
 
 export default function EditCandidatePage({ params }: { params: { token: string } }) {
@@ -31,6 +33,7 @@ export default function EditCandidatePage({ params }: { params: { token: string 
           rawResume: c.rawResume,
           projects: c.projects,
           style: c.style,
+          openToMatching: Boolean(c.openToMatching),
         });
         setInfo({
           id: c.id,
@@ -39,6 +42,7 @@ export default function EditCandidatePage({ params }: { params: { token: string 
           viewedAt: c.viewedAt ?? null,
           decisionReason: c.decisionReason ?? null,
           hasRecruiter: Boolean(c.hasRecruiter),
+          openToMatching: Boolean(c.openToMatching),
         });
         setState("ready");
       })
@@ -66,6 +70,9 @@ export default function EditCandidatePage({ params }: { params: { token: string 
             hasRecruiter={info.hasRecruiter}
             profileUrl={`${origin}/r/${info.id}`}
           />
+        )}
+        {state === "ready" && info && (
+          <MatchingRoles token={params.token} optedIn={info.openToMatching} />
         )}
         {state === "ready" && initial && (
           <CandidateWizard mode="edit" editToken={params.token} initial={initial} />

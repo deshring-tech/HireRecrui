@@ -26,6 +26,7 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
       viewedAt: candidate.viewedAt || null,
       decisionReason: candidate.decisionReason || null,
       hasRecruiter: Boolean(candidate.recruiterId),
+      openToMatching: Boolean(candidate.openToMatching),
     },
   });
 }
