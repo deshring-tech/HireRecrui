@@ -78,7 +78,10 @@ export async function POST(req: NextRequest) {
   if (limited) return limited;
 
   const body = await req.json();
-  const { name, title, email, rawResume, projects, clarifyingQA, style, recruiterId, jobId, editToken, consent } = body;
+  const {
+    name, title, email, rawResume, projects, clarifyingQA, style,
+    recruiterId, jobId, editToken, consent, openToMatching,
+  } = body;
 
   // Editing an existing profile: the edit token is the authorization.
   const existing = editToken ? await getCandidateByEditToken(editToken) : undefined;
@@ -163,6 +166,7 @@ Return strict JSON matching this shape exactly, no extra keys, no markdown.`,
       clarifyingQA,
       style,
       profile: finalProfile,
+      openToMatching: Boolean(openToMatching),
       updatedAt: now,
     });
     return NextResponse.json({ id: existing.id, editToken: existing.editToken });
@@ -181,6 +185,7 @@ Return strict JSON matching this shape exactly, no extra keys, no markdown.`,
     clarifyingQA,
     style,
     profile: finalProfile,
+    openToMatching: Boolean(openToMatching),
     status: "new",
     createdAt: now,
     updatedAt: now,
