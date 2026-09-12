@@ -127,6 +127,20 @@ export default function LoginPage() {
                 ? "Create account"
                 : "Send reset link"}
             </button>
+
+            {mode === "signup" && (
+              <p className="text-xs text-slate-400 text-center">
+                By creating an account you agree to the{" "}
+                <a href="/terms" target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
+                  Terms
+                </a>{" "}
+                and{" "}
+                <a href="/privacy" target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
+                  Privacy Policy
+                </a>
+                .
+              </p>
+            )}
           </div>
 
           <div className="mt-5 text-center text-sm">

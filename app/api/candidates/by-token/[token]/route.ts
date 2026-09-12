@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCandidateByEditToken } from "@/lib/db";
+import { deleteCandidateCompletely } from "@/lib/deletion";
+import { rateLimit } from "@/lib/rateLimit";
 
 // Never cache: this route reports live status/view counts. A cached response
 // would show the candidate stale information indefinitely.
@@ -29,4 +31,21 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
       openToMatching: Boolean(candidate.openToMatching),
     },
   });
+}
+
+// Candidate deletes their own profile. Same authorization as editing: the private link.
+export async function DELETE(req: NextRequest, { params }: { params: { token: string } }) {
+  const limited = rateLimit(req, { bucket: "profile-delete", limit: 5, windowMs: 60_000 });
+  if (limited) return limited;
+
+  const candidate = await getCandidateByEditToken(params.token);
+  if (!candidate) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  try {
+    await deleteCandidateCompletely(candidate);
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[profile] deletion failed:", (err as Error).message);
+    return NextResponse.json({ error: "Couldn't delete your profile. Please try again." }, { status: 500 });
+  }
 }

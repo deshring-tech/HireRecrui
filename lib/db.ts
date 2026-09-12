@@ -64,3 +64,14 @@ export const deleteResetToken = (token: string) => getStore().deleteResetToken(t
 export const addNotification = (n: Notification) => getStore().addNotification(n);
 export const listNotifications = (audience: string) => getStore().listNotifications(audience);
 export const markNotificationsRead = (audience: string) => getStore().markNotificationsRead(audience);
+
+// deletion (policy lives in lib/deletion.ts)
+export const deleteCandidate = (id: string) => getStore().deleteCandidate(id);
+export const detachCandidate = (id: string) => getStore().detachCandidate(id);
+export const deleteUser = (id: string) => getStore().deleteUser(id);
+export const deleteNotificationsForAudience = (audience: string) =>
+  getStore().deleteNotificationsForAudience(audience);
+export const listAllCandidateUploads = () => getStore().listAllCandidateUploads();
+
+// admin
+export const adminRows = () => getStore().adminRows();

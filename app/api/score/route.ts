@@ -3,6 +3,7 @@ import { aiJSON } from "@/lib/ai";
 import { getJob, listCandidates, updateJob, updateCandidate, Score } from "@/lib/db";
 import { scoreCandidateAlgorithmic } from "@/lib/algo";
 import { getCurrentUser } from "@/lib/auth";
+import { forRecruiter } from "@/lib/candidateView";
 
 export async function POST(req: NextRequest) {
   const user = await getCurrentUser();
@@ -41,5 +42,5 @@ export async function POST(req: NextRequest) {
     })
   );
 
-  return NextResponse.json({ candidates: await listCandidates(user.id) });
+  return NextResponse.json({ candidates: (await listCandidates(user.id)).map(forRecruiter) });
 }

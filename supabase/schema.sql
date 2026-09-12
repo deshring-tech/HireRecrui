@@ -6,6 +6,7 @@ create table if not exists users (
   email text not null unique,
   password_hash text not null,
   name text not null,
+  last_seen_at timestamptz,
   created_at timestamptz not null default now()
 );
 
@@ -51,6 +52,10 @@ create table if not exists candidates (
   -- transparency: when a recruiter first opened this profile, and total views
   viewed_at timestamptz,
   view_count integer not null default 0,
+  -- opt-in: discoverable by other recruiters via matching
+  open_to_matching boolean not null default false,
+  -- self = candidate-built, link = via a recruiter's intake link, bulk = recruiter-uploaded résumé
+  source text check (source in ('self', 'link', 'bulk')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

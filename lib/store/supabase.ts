@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import {
+  AdminRows,
   Candidate,
   Job,
   Notification,
@@ -8,6 +9,7 @@ import {
   Store,
   User,
 } from "./types";
+import { uploadUrlsFromProjects } from "./uploadRefs";
 
 // Uses the service-role key on the server. All access here is server-side only and
 // ownership is enforced in the route handlers, so we bypass RLS deliberately. RLS is
@@ -55,6 +57,7 @@ function candidateFromRow(r: any): Candidate {
     viewedAt: r.viewed_at ?? null,
     viewCount: r.view_count ?? 0,
     openToMatching: r.open_to_matching ?? false,
+    source: r.source ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -80,6 +83,7 @@ function candidateToRow(c: Partial<Candidate>): Record<string, unknown> {
   if (c.viewedAt !== undefined) row.viewed_at = c.viewedAt;
   if (c.viewCount !== undefined) row.view_count = c.viewCount;
   if (c.openToMatching !== undefined) row.open_to_matching = c.openToMatching;
+  if (c.source !== undefined) row.source = c.source;
   if (c.createdAt !== undefined) row.created_at = c.createdAt;
   if (c.updatedAt !== undefined) row.updated_at = c.updatedAt;
   return row;
@@ -103,6 +107,7 @@ function userFromRow(r: any): User {
     email: r.email,
     passwordHash: r.password_hash,
     name: r.name,
+    lastSeenAt: r.last_seen_at ?? null,
     createdAt: r.created_at,
   };
 }
@@ -124,6 +129,24 @@ function notificationFromRow(r: any): Notification {
 // would return 200 and the caller would think data was saved when it wasn't.
 function assertOk(op: string, error: { message: string } | null): void {
   if (error) throw new Error(`Supabase ${op} failed: ${error.message}`);
+}
+
+// Supabase caps a single response at 1000 rows by default, so whole-table reads
+// (admin stats, deletion reference checks) have to page through explicitly.
+const PAGE_SIZE = 1000;
+async function fetchAll<T>(table: string, columns: string, orderBy: string): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await db()
+      .from(table)
+      .select(columns)
+      .order(orderBy, { ascending: true })
+      .range(from, from + PAGE_SIZE - 1);
+    assertOk(`fetchAll(${table})`, error);
+    const page = (data ?? []) as T[];
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) return rows;
+  }
 }
 
 export const supabaseStore: Store = {
@@ -237,6 +260,7 @@ export const supabaseStore: Store = {
     if (patch.email !== undefined) row.email = patch.email;
     if (patch.passwordHash !== undefined) row.password_hash = patch.passwordHash;
     if (patch.name !== undefined) row.name = patch.name;
+    if (patch.lastSeenAt !== undefined) row.last_seen_at = patch.lastSeenAt;
     const { data, error } = await db().from("users").update(row).eq("id", id).select("*").maybeSingle();
     assertOk("updateUser", error);
     return data ? userFromRow(data) : undefined;
@@ -293,5 +317,72 @@ export const supabaseStore: Store = {
   },
   async markNotificationsRead(audience) {
     await db().from("notifications").update({ read: true }).eq("audience", audience);
+  },
+
+  // --- deletion ---
+
+  async deleteCandidate(id) {
+    // notifications.candidate_id is ON DELETE CASCADE, so related notifications go too.
+    const { error } = await db().from("candidates").delete().eq("id", id);
+    assertOk("deleteCandidate", error);
+  },
+  async detachCandidate(id) {
+    const { error } = await db()
+      .from("candidates")
+      .update({
+        recruiter_id: null,
+        job_id: null,
+        score: null,
+        status: "new",
+        decision_reason: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+    assertOk("detachCandidate", error);
+  },
+  async deleteUser(id) {
+    // Cascades to jobs, sessions, reset tokens and any candidates still attached.
+    const { error } = await db().from("users").delete().eq("id", id);
+    assertOk("deleteUser", error);
+  },
+  async deleteNotificationsForAudience(audience) {
+    const { error } = await db().from("notifications").delete().eq("audience", audience);
+    assertOk("deleteNotificationsForAudience", error);
+  },
+  async listAllCandidateUploads() {
+    const rows = await fetchAll<{ id: string; projects: Candidate["projects"] }>(
+      "candidates",
+      "id, projects",
+      "id"
+    );
+    return rows.map((r) => ({ id: r.id, urls: uploadUrlsFromProjects(r.projects) }));
+  },
+
+  // --- admin ---
+
+  async adminRows(): Promise<AdminRows> {
+    const [users, sessions, candidates, jobs] = await Promise.all([
+      fetchAll<any>("users", "id, created_at, last_seen_at", "id"),
+      fetchAll<any>("sessions", "user_id, created_at", "token"),
+      fetchAll<any>(
+        "candidates",
+        "id, recruiter_id, created_at, view_count, open_to_matching, status, source",
+        "id"
+      ),
+      fetchAll<any>("jobs", "id, status, created_at", "id"),
+    ]);
+    return {
+      users: users.map((u) => ({ id: u.id, createdAt: u.created_at, lastSeenAt: u.last_seen_at ?? null })),
+      sessions: sessions.map((s) => ({ userId: s.user_id, createdAt: s.created_at })),
+      candidates: candidates.map((c) => ({
+        recruiterId: c.recruiter_id,
+        createdAt: c.created_at,
+        viewCount: c.view_count ?? 0,
+        openToMatching: Boolean(c.open_to_matching),
+        status: c.status,
+        source: c.source ?? null,
+      })),
+      jobs: jobs.map((j) => ({ status: j.status, createdAt: j.created_at })),
+    };
   },
 };

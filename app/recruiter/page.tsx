@@ -9,6 +9,7 @@ import EmailCandidateButton from "@/components/EmailCandidateButton";
 import CopyLinkButton from "@/components/CopyLinkButton";
 import NotificationBell from "@/components/NotificationBell";
 import TalentPoolMatches from "@/components/TalentPoolMatches";
+import DeleteAccount from "@/components/DeleteAccount";
 import type { Candidate, Job } from "@/lib/db";
 
 const SCORE_STYLE: Record<string, string> = {
@@ -301,7 +302,8 @@ export default function RecruiterPage() {
               <label className="label mb-0">Bulk-upload resumes</label>
               <p className="text-xs text-slate-400 mt-1">
                 Drop in a stack of resumes (PDF / DOCX / TXT). Each is auto-profiled, scored against your open
-                roles, and routed to the best fit. You make every decision.
+                roles, and routed to the best fit. You make every decision. Only upload résumés you&apos;re
+                authorized to process.
               </p>
             </div>
             <button
@@ -395,9 +397,27 @@ export default function RecruiterPage() {
                 </div>
 
                 <div className="flex flex-col items-end gap-2">
-                  <Link href={`/r/${c.id}`} className="text-xs font-medium text-brand-600 hover:text-brand-700">
-                    View full profile →
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={async () => {
+                        const ok = window.confirm(
+                          c.source === "bulk"
+                            ? `Permanently delete ${c.profile.name}'s uploaded résumé?`
+                            : `Remove ${c.profile.name} from your pipeline? Their profile stays with them; your score and decision are removed.`
+                        );
+                        if (!ok) return;
+                        const res = await fetch(`/api/candidates/${c.id}`, { method: "DELETE" });
+                        if (res.ok) setCandidates((prev) => prev.filter((x) => x.id !== c.id));
+                        else window.alert("Couldn't remove this candidate. Please try again.");
+                      }}
+                      className="text-xs text-slate-400 hover:text-rose-600"
+                    >
+                      Remove
+                    </button>
+                    <Link href={`/r/${c.id}`} className="text-xs font-medium text-brand-600 hover:text-brand-700">
+                      View full profile →
+                    </Link>
+                  </div>
                   <div className="flex items-center gap-2">
                     <EmailCandidateButton
                       recruiterId={c.recruiterId}
@@ -418,6 +438,8 @@ export default function RecruiterPage() {
             </div>
           ))}
         </div>
+
+        <DeleteAccount />
       </section>
     </main>
   );

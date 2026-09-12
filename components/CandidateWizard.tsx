@@ -554,7 +554,16 @@ export default function CandidateWizard({
                   shareable profile.{" "}
                   {recruiterName
                     ? "It will be shared with the recruiter above, and I understand a human makes the final hiring decision."
-                    : "I control who I share the link with."}
+                    : "I control who I share the link with."}{" "}
+                  I agree to the{" "}
+                  <a href="/terms" target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
+                    Terms
+                  </a>{" "}
+                  and{" "}
+                  <a href="/privacy" target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
+                    Privacy Policy
+                  </a>
+                  .
                 </span>
               </label>
             </div>

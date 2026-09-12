@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import {
+  AdminRows,
   Candidate,
   Job,
   Notification,
@@ -9,6 +10,7 @@ import {
   Store,
   User,
 } from "./types";
+import { uploadUrlsFromProjects } from "./uploadRefs";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "db.json");
@@ -176,5 +178,70 @@ export const jsonStore: Store = {
         n.audience === audience ? { ...n, read: true } : n
       );
     });
+  },
+
+  // --- deletion (mirrors the Postgres foreign-key behaviour in supabase/schema.sql) ---
+
+  async deleteCandidate(id) {
+    tx((db) => {
+      db.candidates = db.candidates.filter((c) => c.id !== id);
+      db.notifications = db.notifications.filter((n) => n.candidateId !== id);
+    });
+  },
+  async detachCandidate(id) {
+    tx((db) => {
+      const c = db.candidates.find((x) => x.id === id);
+      if (!c) return;
+      c.recruiterId = null;
+      c.jobId = null;
+      c.score = undefined;
+      c.status = "new";
+      c.decisionReason = undefined;
+      c.updatedAt = new Date().toISOString();
+    });
+  },
+  async deleteUser(id) {
+    tx((db) => {
+      const jobIds = new Set(db.jobs.filter((j) => j.recruiterId === id).map((j) => j.id));
+      const removedCandidates = new Set(
+        db.candidates.filter((c) => c.recruiterId === id).map((c) => c.id)
+      );
+      db.jobs = db.jobs.filter((j) => j.recruiterId !== id);
+      db.candidates = db.candidates.filter((c) => c.recruiterId !== id); // ON DELETE CASCADE
+      for (const c of db.candidates) if (c.jobId && jobIds.has(c.jobId)) c.jobId = null; // ON DELETE SET NULL
+      db.notifications = db.notifications.filter(
+        (n) => !(n.candidateId && removedCandidates.has(n.candidateId))
+      );
+      db.sessions = db.sessions.filter((s) => s.userId !== id);
+      db.resetTokens = db.resetTokens.filter((r) => r.userId !== id);
+      db.users = db.users.filter((u) => u.id !== id);
+    });
+  },
+  async deleteNotificationsForAudience(audience) {
+    tx((db) => {
+      db.notifications = db.notifications.filter((n) => n.audience !== audience);
+    });
+  },
+  async listAllCandidateUploads() {
+    return readDB().candidates.map((c) => ({ id: c.id, urls: uploadUrlsFromProjects(c.projects) }));
+  },
+
+  // --- admin ---
+
+  async adminRows(): Promise<AdminRows> {
+    const db = readDB();
+    return {
+      users: db.users.map((u) => ({ id: u.id, createdAt: u.createdAt, lastSeenAt: u.lastSeenAt ?? null })),
+      sessions: db.sessions.map((s) => ({ userId: s.userId, createdAt: s.createdAt })),
+      candidates: db.candidates.map((c) => ({
+        recruiterId: c.recruiterId,
+        createdAt: c.createdAt,
+        viewCount: c.viewCount ?? 0,
+        openToMatching: Boolean(c.openToMatching),
+        status: c.status,
+        source: c.source ?? null,
+      })),
+      jobs: db.jobs.map((j) => ({ status: j.status, createdAt: j.createdAt })),
+    };
   },
 };

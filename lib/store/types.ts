@@ -68,15 +68,23 @@ export type Candidate = {
   viewCount?: number;
   // Opt-in: lets recruiters other than the owner discover this profile via matching.
   openToMatching?: boolean;
+  // How the profile entered the system. Drives deletion: "bulk" résumés exist only
+  // in the uploading recruiter's pipeline, while "self"/"link" profiles belong to
+  // the candidate. null = created before this was tracked.
+  source?: CandidateSource | null;
   createdAt: string;
   updatedAt: string;
 };
+
+export type CandidateSource = "self" | "link" | "bulk";
 
 export type User = {
   id: string;
   email: string;
   passwordHash: string;
   name: string;
+  // Last authenticated activity (throttled). Used to measure recruiter retention.
+  lastSeenAt?: string | null;
   createdAt: string;
 };
 
@@ -150,4 +158,31 @@ export interface Store {
   addNotification(n: Notification): Promise<void>;
   listNotifications(audience: string): Promise<Notification[]>;
   markNotificationsRead(audience: string): Promise<void>;
+
+  // deletion — the policy for what gets removed lives in lib/deletion.ts
+  deleteCandidate(id: string): Promise<void>;
+  // Unlinks a profile from its recruiter and scrubs that recruiter's score/decision.
+  detachCandidate(id: string): Promise<void>;
+  // Also removes the user's jobs, sessions, reset tokens and still-attached candidates.
+  deleteUser(id: string): Promise<void>;
+  deleteNotificationsForAudience(audience: string): Promise<void>;
+  listAllCandidateUploads(): Promise<{ id: string; urls: string[] }[]>;
+
+  // admin
+  adminRows(): Promise<AdminRows>;
 }
+
+// Minimal whole-table projections for the admin stats page.
+export type AdminRows = {
+  users: { id: string; createdAt: string; lastSeenAt: string | null }[];
+  sessions: { userId: string; createdAt: string }[];
+  candidates: {
+    recruiterId: string | null;
+    createdAt: string;
+    viewCount: number;
+    openToMatching: boolean;
+    status: CandidateStatus;
+    source: CandidateSource | null;
+  }[];
+  jobs: { status: "open" | "closed"; createdAt: string }[];
+};

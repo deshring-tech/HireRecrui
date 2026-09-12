@@ -100,6 +100,7 @@ export async function POST(req: NextRequest) {
       style: "ats",
       profile,
       score: bestScore,
+      source: "bulk",
       status: "new", // human decides every accept/reject
       createdAt: now,
       updatedAt: now,

@@ -11,8 +11,11 @@ import { notFound } from "next/navigation";
 
 // Per-profile preview so shared links render a proper card on LinkedIn/WhatsApp/etc.
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  // Profiles are shared by link, not published: keep them out of search results.
+  // Link-preview cards (OG tags) still work — preview bots ignore noindex.
+  const robots = { index: false, follow: false };
   const candidate = await getCandidate(params.id);
-  if (!candidate) return { title: "Profile not found" };
+  if (!candidate) return { title: "Profile not found", robots };
   const { name, title, summary, skills } = candidate.profile;
   const description =
     (summary && summary.slice(0, 180)) ||
@@ -21,6 +24,7 @@ export async function generateMetadata({ params }: { params: { id: string } }): 
   return {
     title: heading,
     description,
+    robots,
     openGraph: { type: "profile", title: heading, description },
     twitter: { card: "summary", title: heading, description },
   };

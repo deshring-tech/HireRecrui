@@ -23,6 +23,12 @@ Or double-click `start.bat`. With no env vars set, the app uses a local JSON fil
 4. Restart the dev server. The app now reads/writes Supabase automatically —
    no code changes.
 
+**Upgrading an existing Supabase project?** `schema.sql` is for fresh projects. If
+your tables already exist, run the numbered migrations you haven't run yet, in
+order, in the SQL Editor: `supabase/migration-002.sql`, `migration-003.sql`,
+`migration-004.sql`. They are additive and safe to re-run. Always run them
+**before** deploying code that needs them.
+
 Note: data does NOT migrate automatically from `data/db.json`; start fresh or
 ask for a migration script if you have data worth keeping.
 
@@ -40,3 +46,6 @@ ask for a migration script if you have data worth keeping.
 |---|---|---|
 | `OPENAI_API_KEY` | LLM-generated profiles, questions, scoring, Q&A | Built-in algorithmic engine |
 | `RESEND_API_KEY` | Real email delivery (notifications, password reset) | Emails logged to server console |
+| `ADMIN_EMAILS` | Comma-separated logins allowed to open `/admin` (launch stats) | `/admin` returns 404 for everyone |
+| `LAUNCH_GOAL_RETAINED_RECRUITERS` | Target shown on the stats page (default 10) | Uses 10 |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | Contact address on Privacy / Terms pages | Pages show a generic "contact us" note |

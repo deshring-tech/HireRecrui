@@ -19,6 +19,15 @@ function makeName(originalName: string): string {
   return `${randomUUID()}${ext}`;
 }
 
+async function supabaseClient() {
+  const { createClient } = await import("@supabase/supabase-js");
+  return createClient(
+    process.env.SUPABASE_URL as string,
+    process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+    { auth: { persistSession: false } }
+  );
+}
+
 // Saves the file and returns a browser-usable URL.
 export async function saveUpload(
   buffer: Buffer,
@@ -28,12 +37,7 @@ export async function saveUpload(
   const filename = makeName(originalName);
 
   if (usingSupabase) {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(
-      process.env.SUPABASE_URL as string,
-      process.env.SUPABASE_SERVICE_ROLE_KEY as string,
-      { auth: { persistSession: false } }
-    );
+    const supabase = await supabaseClient();
     const { error } = await supabase.storage
       .from(BUCKET)
       .upload(filename, buffer, { contentType, upsert: false });
@@ -45,4 +49,50 @@ export async function saveUpload(
   await fs.mkdir(LOCAL_DIR, { recursive: true });
   await fs.writeFile(path.join(LOCAL_DIR, filename), buffer);
   return `/uploads/${filename}`;
+}
+
+// Maps a stored URL back to its file name — but only for files this app created:
+// in our bucket/folder, flat, and named exactly like saveUpload names them. URLs in
+// a profile are client-supplied, so anything else (other hosts, nested paths,
+// traversal) is refused rather than deleted.
+function ownedFileName(url: string): string | null {
+  let rest: string;
+  if (usingSupabase) {
+    const base = (process.env.SUPABASE_URL as string).replace(/\/+$/, "");
+    const prefix = `${base}/storage/v1/object/public/${BUCKET}/`;
+    if (!url.startsWith(prefix)) return null;
+    rest = url.slice(prefix.length);
+  } else {
+    if (!url.startsWith("/uploads/")) return null;
+    rest = url.slice("/uploads/".length);
+  }
+  let name: string;
+  try {
+    name = decodeURIComponent(rest.split(/[?#]/)[0]);
+  } catch {
+    return null;
+  }
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\.[A-Za-z0-9]{1,9})?$/i.test(name)
+    ? name
+    : null;
+}
+
+// Best-effort removal of uploaded files. Never throws: a stray orphaned file is
+// far less harmful than a deletion request that half-fails with an error.
+export async function deleteUploads(urls: string[]): Promise<number> {
+  const names = [...new Set(urls.map(ownedFileName).filter((n): n is string => Boolean(n)))];
+  if (names.length === 0) return 0;
+  try {
+    if (usingSupabase) {
+      const supabase = await supabaseClient();
+      const { error } = await supabase.storage.from(BUCKET).remove(names);
+      if (error) throw new Error(error.message);
+    } else {
+      await Promise.all(names.map((n) => fs.unlink(path.join(LOCAL_DIR, n)).catch(() => undefined)));
+    }
+    return names.length;
+  } catch (err) {
+    console.error("[storage] upload deletion failed:", (err as Error).message);
+    return 0;
+  }
 }
